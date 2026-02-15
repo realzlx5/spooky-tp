@@ -1,3 +1,59 @@
+-- 🔑 SCRIPT KEY (vom Käufer gesetzt)
+local key = getgenv().script_key
+
+-- ❌ kein Key gesetzt
+if not key then
+    game.Players.LocalPlayer:Kick("No key provided")
+    return
+end
+
+-- 🔐 DEINE 20 KEYS
+local validKeys = {
+    "483920174635",
+    "928374928374",
+    "102938475610",
+    "564738291045",
+    "837462910384",
+    "019283746556",
+    "665544332211",
+    "998877665544",
+    "111222333444",
+    "555666777888",
+    "123123123123",
+    "321321321321",
+    "444555666777",
+    "777888999000",
+    "246810121416",
+    "135791113151",
+    "909090909090",
+    "808080808080",
+    "707070707070",
+    "606060606060"
+}
+
+-- ✅ check key
+local allowed = false
+for _, k in ipairs(validKeys) do
+    if k == key then
+        allowed = true
+        break
+    end
+end
+
+-- ❌ falscher Key
+if not allowed then
+    game.Players.LocalPlayer:Kick("Invalid key")
+    return
+end
+
+------------------------------------------------
+-- ⬇️ HIER BEGINNT DEIN EIGENTLICHES SCRIPT ⬇️
+------------------------------------------------
+
+print("Key accepted, loading spooky script...")
+
+-- HIER kommt dein ganzer alter spooky.lua Code rein
+-- NICHTS mehr mit loadstring nötig
 -- // SERVICES // --
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
