@@ -1,118 +1,29 @@
-----------------------------------------------------
--- MERGED SCRIPT: WHITELIST + Spooky Hub
-----------------------------------------------------
-
--- // --- WHITELIST CONFIGURATION --- // --
-local whitelist = {
-    "PowerOFLukad", -- HIER deinen Namen reinschreiben
-    "Khohoi6", 
-    "twizzyskyblablo", 
-    "ihateblknittersyk", 
-    "Khohoi6", 
-    "Khohoi6", 
-    "Khohoi6", 
-    "Khohoi6", 
-    "Khohoi6", 
-    "Khohoi6", 
-    "Khohoi6", 
-    "Khohoi6", 
-    
-}
-
--- // --- WHITELIST LOGIC (CLIENT SIDE ADAPTED) --- // --
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer
-
-local function checkWhitelist()
-    local isWhitelisted = false
-    for _, name in ipairs(whitelist) do
-        if string.lower(LocalPlayer.Name) == string.lower(name) then
-            isWhitelisted = true
-            break
-        end
-    end
-    return isWhitelisted
-end
-
--- Wenn nicht gewhitelistet -> Kick & Stop Script
-if not checkWhitelist() then
-    LocalPlayer:Kick("⛔ You are not whitelisted for this Script! ⛔")
-    return 
-end
-
--- Wenn gewhitelistet -> Zeige Notification
-task.spawn(function()
-    local sg = Instance.new("ScreenGui")
-    sg.Name = "WhitelistNotify"
-    sg.ResetOnSpawn = false
-    sg.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    local frame = Instance.new("Frame")
-    frame.Name = "MainFrame"
-    frame.Size = UDim2.new(0, 220, 0, 60)
-    frame.Position = UDim2.new(1, 10, 1, -70)
-    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    frame.BorderSizePixel = 0
-    frame.Parent = sg
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = frame
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(0, 255, 127)
-    stroke.Thickness = 2
-    stroke.Parent = frame
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = "Whitelist success! Loading..."
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 16
-    label.Font = Enum.Font.GothamBold
-    label.Parent = frame
-
-    local tweenIn = TweenService:Create(frame, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1, -230, 1, -70)
-    })
-    tweenIn:Play()
-
-    task.wait(4)
-    local tweenOut = TweenService:Create(frame, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-        Position = UDim2.new(1, 10, 1, -70)
-    })
-    tweenOut:Play()
-    tweenOut.Completed:Connect(function()
-        sg:Destroy()
-    end)
-end)
-
-print("✅ Whitelist OK: " .. LocalPlayer.Name)
-
-----------------------------------------------------
--- MAIN CODE START (Spooky Hub)
-----------------------------------------------------
-
 -- // SERVICES // --
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 
--- LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local AnimalsData = require(ReplicatedStorage:WaitForChild("Datas"):WaitForChild("Animals"))
+
+-- Versuche Animal Data zu laden, falls vorhanden
+local AnimalsData
+pcall(function()
+    AnimalsData = require(ReplicatedStorage:WaitForChild("Datas"):WaitForChild("Animals"))
+end)
+if not AnimalsData then AnimalsData = {} end -- Fallback um Fehler zu vermeiden
 
 -- // SETTINGS SYSTEM // --
-local SETTINGS_FILE = "Spooky_Settings.json"
+local SETTINGS_FILE = "ZLX_Settings.json"
 local CONFIG = {
     AUTO_STEAL_NEAREST = false,
     SPEED_HACK_TOGGLE = false,
-    FRIENDS_ALLOWED = false
+    FRIENDS_ALLOWED = false -- Gespeicherte Einstellung fÃ¼r Friends
 }
 
 local function LoadSettings()
@@ -191,20 +102,27 @@ local FFlags = {
 local animDisableConn = nil
 local originalAnimIds = {}
 local animateScript = nil
-local ANIM_TYPES = {"walk", "run", "jump", "fall", "idle", "toolnone"}
+
+local ANIM_TYPES = {
+    "walk", "run", "jump", "fall", "idle", "toolnone"
+}
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "ESPFolder"
 ESPFolder.Parent = workspace
+
 local fakePosESP = nil
 local serverPosition = nil
 
 local function cacheOriginalAnimations()
     local char = LocalPlayer.Character
     if not char then return false end
+    
     animateScript = char:FindFirstChild("Animate")
     if not animateScript then return false end
+    
     originalAnimIds = {}
+    
     for _, animType in ipairs(ANIM_TYPES) do
         local animFolder = animateScript:FindFirstChild(animType)
         if animFolder then
@@ -221,19 +139,25 @@ end
 
 local function disableAnimations()
     if not animateScript then return end
+    
     for _, animType in ipairs(ANIM_TYPES) do
         local animFolder = animateScript:FindFirstChild(animType)
         if animFolder then
             for _, anim in ipairs(animFolder:GetChildren()) do
-                if anim:IsA("Animation") then anim.AnimationId = "" end
+                if anim:IsA("Animation") then
+                    anim.AnimationId = ""
+                end
             end
         end
     end
+    
     local char = LocalPlayer.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
-            for _, track in ipairs(hum:GetPlayingAnimationTracks()) do track:Stop(0) end
+            for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
+                track:Stop(0)
+            end
         end
     end
 end
@@ -242,13 +166,17 @@ local function restoreAnimations()
     local char = LocalPlayer.Character
     if not char then return end
     animateScript = char:FindFirstChild("Animate")
+
     if not animateScript or not originalAnimIds then return end
+    
     for animType, anims in pairs(originalAnimIds) do
         local animFolder = animateScript:FindFirstChild(animType)
         if animFolder then
             for animName, animId in pairs(anims) do
                 local anim = animFolder:FindFirstChild(animName)
-                if anim and anim:IsA("Animation") then anim.AnimationId = animId end
+                if anim and anim:IsA("Animation") then
+                    anim.AnimationId = animId
+                end
             end
         end
     end
@@ -256,20 +184,30 @@ end
 
 local function toggleAnimLoop(state)
     if state then
-        if not next(originalAnimIds) then cacheOriginalAnimations() end
+        if not next(originalAnimIds) then
+            cacheOriginalAnimations()
+        end
+        
         if animDisableConn then animDisableConn:Disconnect() end
         animDisableConn = RunService.Heartbeat:Connect(function()
-            if Config.AnimDisable then disableAnimations() end
+            if Config.AnimDisable then
+                disableAnimations()
+            end
         end)
     else
-        if animDisableConn then animDisableConn:Disconnect(); animDisableConn = nil end
+        if animDisableConn then
+            animDisableConn:Disconnect()
+            animDisableConn = nil
+        end
         restoreAnimations()
     end
 end
 
 local function setFlags()
     for name, value in pairs(FFlags) do
-        pcall(function() setfflag(tostring(name), tostring(value)) end)
+        pcall(function()
+            setfflag(tostring(name), tostring(value))
+        end)
     end
 end
 
@@ -277,9 +215,11 @@ local function respawn(plr)
     local rcdEnabled, wasHidden = false, false
     if gethidden then
         pcall(function()
-             rcdEnabled, wasHidden = gethidden(workspace, 'RejectCharacterDeletions') ~= Enum.RejectCharacterDeletions.Disabled
+             rcdEnabled, wasHidden = gethidden(workspace, 'RejectCharacterDeletions')
+            ~= Enum.RejectCharacterDeletions.Disabled
         end)
     end
+
     if rcdEnabled and replicatesignal then
         replicatesignal(plr.ConnectDiedSignalBackend)
         task.wait(Players.RespawnTime - 0.1)
@@ -287,7 +227,9 @@ local function respawn(plr)
     else
         local char = plr.Character
         local hum = char:FindFirstChildWhichIsA('Humanoid')
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Dead) end
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Dead)
+        end
         char:ClearAllChildren()
         local newChar = Instance.new('Model')
         newChar.Parent = workspace
@@ -306,31 +248,58 @@ function createESPVisual()
     part.Anchored = true
     part.CanCollide = false
     part.Parent = ESPFolder
+    
     local box = Instance.new("SelectionBox")
+    box.Name = "Outline"
     box.Adornee = part
     box.Parent = part
     box.Color3 = Config.ESPColor
     box.LineThickness = 0.10
+    box.Transparency = 0
     box.SurfaceTransparency = 0.85
+    
     local bb = Instance.new("BillboardGui")
-    bb.Parent = part; bb.Adornee = part; bb.Size = UDim2.new(0, 100, 0, 50); bb.AlwaysOnTop = true; bb.StudsOffset = Vector3.new(0, 4, 0)
+    bb.Parent = part
+    bb.Adornee = part
+    bb.Size = UDim2.new(0, 100, 0, 50)
+    bb.AlwaysOnTop = true
+    bb.StudsOffset = Vector3.new(0, 4, 0)
+    
     local text = Instance.new("TextLabel")
-    text.Parent = bb; text.Size = UDim2.new(1, 0, 1, 0); text.BackgroundTransparency = 1; text.Text = "YOUR POSITION"; text.TextColor3 = Config.ESPColor; text.TextSize = 10; text.Font = Enum.Font.GothamBold
+    text.Parent = bb
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.Text = "YOUR POSITION"
+    text.TextColor3 = Config.ESPColor
+    text.TextScaled = false
+    text.TextSize = 10
+    text.Font = Enum.Font.GothamBold
+    text.TextStrokeTransparency = 0.5
+    
     return part
 end
 
 local function trackServerPosition()
     local char = LocalPlayer.Character
     if not char then return end
+    
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    local success, result = pcall(function() return hrp:GetNetworkOwner() end)
-    if success and result ~= nil then
+    
+    local success, result = pcall(function()
+        return hrp:GetNetworkOwner()
+    end)
+    
+    if success and result == nil then
+    else
         local oldPos = hrp:GetPropertyChangedSignal("Position"):Connect(function()
             task.wait(0.15)
             local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                serverPosition = char.HumanoidRootPart.Position
+            if char then
+                local currentHRP = char:FindFirstChild("HumanoidRootPart")
+                if currentHRP then
+                    serverPosition = currentHRP.Position
+                end
             end
         end)
     end
@@ -339,26 +308,35 @@ end
 local function initializeESP()
     ESPFolder:ClearAllChildren()
     fakePosESP = createESPVisual()
+    
     local char = LocalPlayer.Character
     if char then
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if hrp then
             serverPosition = hrp.Position
             fakePosESP.CFrame = CFrame.new(serverPosition)
+            
             hrp:GetPropertyChangedSignal("CFrame"):Connect(function()
                 task.wait(0.2)
                 serverPosition = hrp.Position
             end)
         end
     end
-    if Config.AnimDisable then task.wait(0.5); cacheOriginalAnimations() end
+    if Config.AnimDisable then
+        task.wait(0.5)
+        cacheOriginalAnimations()
+    end
 end
 
+-- // NEW: GLOBAL DESYNC FUNCTION // --
 local function ExecuteDesync()
     setFlags()
     respawn(LocalPlayer)
+    
+    -- Close GUI if open
     if CoreGui:FindFirstChild("DesyncControlUI") then CoreGui.DesyncControlUI:Destroy() end
     if PlayerGui:FindFirstChild("DesyncControlUI") then PlayerGui.DesyncControlUI:Destroy() end
+    
     task.wait(5.1)
     initializeESP()
 end
@@ -482,10 +460,11 @@ end
 
 -- // MAIN GUI CONSTRUCTION // --
 local mainGui = Instance.new("ScreenGui", PlayerGui)
-mainGui.Name = "SpookyHubMain"
+mainGui.Name = "ZLXHubMain"
 mainGui.ResetOnSpawn = false
 
 local dragFrame = Instance.new("Frame", mainGui)
+-- **SIZE CHANGED HERE (HIGHER FOR NEW BUTTON)** --
 dragFrame.Size = UDim2.new(0, 220, 0, 340) 
 dragFrame.Position = UDim2.new(0.5, -110, 0.5, -170)
 dragFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
@@ -499,7 +478,7 @@ mainStroke.Color = Color3.fromRGB(160, 0, 255)
 
 local title = Instance.new("TextLabel", dragFrame)
 title.Size = UDim2.new(1, 0, 0, 40)
-title.Text = "SPOOKY HUB"
+title.Text = "ZLX HUB"
 title.Font = Enum.Font.GothamBold; title.TextColor3 = Color3.fromRGB(200, 100, 255)
 title.TextSize = 20
 title.BackgroundTransparency = 1
@@ -520,8 +499,10 @@ local function createBtn(txt, col)
     return b
 end
 
+-- BUTTON DEFINITIONS
 local grabButton = createBtn("INSTA GRAB: OFF", Color3.fromRGB(25, 25, 25))
 local speedBtn = createBtn("SPEED HACK: OFF", Color3.fromRGB(25, 25, 25))
+-- NEW FRIENDS BUTTON
 local friendsBtn = createBtn("FRIENDS: BLOCKED", Color3.fromRGB(25, 25, 25))
 local startButton = createBtn("START TELEPORT (F)", Color3.fromRGB(60, 0, 150))
 local desyncBtn = createBtn("INSTA DESYNC (K)", Color3.fromRGB(90, 0, 180)) 
@@ -531,23 +512,34 @@ footer.Size = UDim2.new(1, 0, 0, 20); footer.Position = UDim2.new(0, 0, 0.93, 0)
 footer.TextColor3 = Color3.fromRGB(160, 0, 255); footer.Font = Enum.Font.Gotham; footer.TextSize = 10; footer.BackgroundTransparency = 1
 
 local showbarFrame = Instance.new("Frame", dragFrame)
-showbarFrame.Size = UDim2.new(0.9, 0, 0, 6); showbarFrame.Position = UDim2.new(0.05, 0, 0.90, 0); showbarFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); showbarFrame.BackgroundTransparency = 0.5; Instance.new("UICorner", showbarFrame)
+showbarFrame.Size = UDim2.new(0.9, 0, 0, 6)
+showbarFrame.Position = UDim2.new(0.05, 0, 0.90, 0)
+showbarFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+showbarFrame.BackgroundTransparency = 0.5
+Instance.new("UICorner", showbarFrame)
 local progressBarFill = Instance.new("Frame", showbarFrame)
 progressBarFill.Size = UDim2.new(0, 0, 1, 0); progressBarFill.BackgroundColor3 = Color3.fromRGB(180, 0, 255); Instance.new("UICorner", progressBarFill)
 
 local function updateUI()
     grabButton.Text = CONFIG.AUTO_STEAL_NEAREST and "INSTA GRAB: ON" or "INSTA GRAB: OFF"
     grabButton.BackgroundColor3 = CONFIG.AUTO_STEAL_NEAREST and Color3.fromRGB(120, 0, 255) or Color3.fromRGB(25, 25, 25)
+    
     speedBtn.Text = CONFIG.SPEED_HACK_TOGGLE and "SPEED HACK: ON" or "SPEED HACK: OFF"
     speedBtn.BackgroundColor3 = CONFIG.SPEED_HACK_TOGGLE and Color3.fromRGB(120, 0, 255) or Color3.fromRGB(25, 25, 25)
+    
     if CONFIG.FRIENDS_ALLOWED then
-        friendsBtn.Text = "FRIENDS: ALLOWED"; friendsBtn.BackgroundColor3 = Color3.fromRGB(20, 50, 20); friendsBtn.TextColor3 = Color3.new(0, 1, 0)
+        friendsBtn.Text = "FRIENDS: ALLOWED"
+        friendsBtn.BackgroundColor3 = Color3.fromRGB(20, 50, 20)
+        friendsBtn.TextColor3 = Color3.new(0, 1, 0)
     else
-        friendsBtn.Text = "FRIENDS: BLOCKED"; friendsBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25); friendsBtn.TextColor3 = Color3.new(1, 1, 1)
+        friendsBtn.Text = "FRIENDS: BLOCKED"
+        friendsBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        friendsBtn.TextColor3 = Color3.new(1, 1, 1)
     end
 end
 updateUI()
 
+-- // DRAGGABLE // --
 local function makeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
     gui.InputBegan:Connect(function(input)
@@ -565,39 +557,61 @@ local function makeDraggable(gui)
 end
 makeDraggable(dragFrame)
 
+-- // FRIENDS LOGIC // --
 local function toggleFriends()
-    CONFIG.FRIENDS_ALLOWED = not CONFIG.FRIENDS_ALLOWED; SaveSettings(); updateUI()
+    CONFIG.FRIENDS_ALLOWED = not CONFIG.FRIENDS_ALLOWED
+    SaveSettings()
+    updateUI()
+    
     if CONFIG.FRIENDS_ALLOWED then
+        -- Sucht nach allen ProximityPrompts die "allow" im Text haben
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("ProximityPrompt") then
                 local combinedText = (obj.ObjectText .. obj.ActionText):lower()
-                if combinedText:find("allow") then fireproximityprompt(obj) end
+                if combinedText:find("allow") then 
+                    fireproximityprompt(obj) 
+                end
             end
         end
     end
 end
 
+-- // TELEPORT SEQUENCE // --
 local function RunTeleportSequence()
     if isExecutingSequence then return end
     local hrp = getHRP()
     if not hrp then return end
-    isExecutingSequence = true; canUseSpeedNow = false
+    isExecutingSequence = true
+    canUseSpeedNow = false
+    
     hrp.CFrame = WAYPOINT_1; task.wait(0.1)
     hrp.CFrame = WAYPOINT_2; task.wait(0.1)
     hrp.CFrame = WAYPOINT_3
-    CONFIG.AUTO_STEAL_NEAREST = true; updateUI(); task.wait(1.3)
-    hrp.CFrame = FINAL_DESTINATION; task.wait(0.2)
-    CONFIG.AUTO_STEAL_NEAREST = false; updateUI(); isExecutingSequence = false; canUseSpeedNow = true
+    
+    CONFIG.AUTO_STEAL_NEAREST = true
+    updateUI()
+    
+    task.wait(1.3)
+    hrp.CFrame = FINAL_DESTINATION
+    task.wait(0.2)
+    
+    CONFIG.AUTO_STEAL_NEAREST = false
+    updateUI()
+    isExecutingSequence = false
+    canUseSpeedNow = true
 end
 
+-- // CLICK EVENTS // --
 grabButton.MouseButton1Click:Connect(function() CONFIG.AUTO_STEAL_NEAREST = not CONFIG.AUTO_STEAL_NEAREST; updateUI(); SaveSettings() end)
 speedBtn.MouseButton1Click:Connect(function() CONFIG.SPEED_HACK_TOGGLE = not CONFIG.SPEED_HACK_TOGGLE; updateUI(); SaveSettings() end)
-friendsBtn.MouseButton1Click:Connect(toggleFriends)
+friendsBtn.MouseButton1Click:Connect(toggleFriends) -- BUTTON CONNECT
 startButton.MouseButton1Click:Connect(RunTeleportSequence)
 desyncBtn.MouseButton1Click:Connect(ExecuteDesync)
 
+-- // MAIN LOOPS // --
 RunService.RenderStepped:Connect(function()
     progressBarFill.Size = IsStealing and UDim2.new(StealProgress, 0, 1, 0) or UDim2.new(0, 0, 1, 0)
+    
     local hrp = getHRP()
     if hrp and #circleParts > 0 then
         for i, part in ipairs(circleParts) do
@@ -606,44 +620,59 @@ RunService.RenderStepped:Connect(function()
             part.CFrame = CFrame.new(pos, hrp.Position)
         end
     end
-    if fakePosESP and serverPosition then fakePosESP.CFrame = fakePosESP.CFrame:Lerp(CFrame.new(serverPosition), 0.2) end
+    
+    if fakePosESP and serverPosition then
+        fakePosESP.CFrame = fakePosESP.CFrame:Lerp(CFrame.new(serverPosition), 0.2)
+    end
 end)
 
 RunService.Heartbeat:Connect(function()
     if CONFIG.SPEED_HACK_TOGGLE and canUseSpeedNow then
-        local char = LocalPlayer.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart"); local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
         if hrp and hum and hum.MoveDirection.Magnitude > 0 then
             hrp.Velocity = Vector3.new(hum.MoveDirection.X * BOOSTED_WALK_SPEED * VELOCITY_MULT, hrp.Velocity.Y, hum.MoveDirection.Z * BOOSTED_WALK_SPEED * VELOCITY_MULT)
         end
     end
+
     if not CONFIG.AUTO_STEAL_NEAREST or IsStealing then return end
     local hrp = getHRP()
     if not hrp then return end
     local nearest, minDist = nil, math.huge
     for _, animalData in ipairs(allAnimalsCache) do
         local dist = (hrp.Position - animalData.worldPosition).Magnitude
-        if dist < minDist and dist <= AUTO_STEAL_PROX_RADIUS then minDist = dist; nearest = animalData end
+        if dist < minDist and dist <= AUTO_STEAL_PROX_RADIUS then
+            minDist = dist; nearest = animalData
+        end
     end
     if nearest then
         local prompt = findProximityPromptForAnimal(nearest)
         if prompt then buildStealCallbacks(prompt); executeInternalStealAsync(prompt) end
     end
+    
     trackServerPosition()
 end)
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.K then ExecuteDesync() 
-    elseif input.KeyCode == Enum.KeyCode.F then RunTeleportSequence()
-    elseif input.KeyCode == Enum.KeyCode.H then toggleFriends() end
+    if input.KeyCode == Enum.KeyCode.K then 
+        ExecuteDesync() 
+    elseif input.KeyCode == Enum.KeyCode.F then 
+        RunTeleportSequence()
+    elseif input.KeyCode == Enum.KeyCode.H then -- HOTKEY H
+        toggleFriends()
+    end
 end)
 
+-- // INIT // --
 local function createCircle()
     for _, v in ipairs(circleParts) do v:Destroy() end
     circleParts = {}
     for i = 1, PartsCount do
         local p = Instance.new("Part", workspace)
-        p.Anchored = true; p.CanCollide = false; p.Material = Enum.Material.Neon; p.Color = PART_COLOR; p.Transparency = 0.3; p.Size = Vector3.new(1, 0.2, 0.3)
+        p.Anchored = true; p.CanCollide = false; p.Material = Enum.Material.Neon; p.Color = PART_COLOR; p.Transparency = 0.3
+        p.Size = Vector3.new(1, 0.2, 0.3)
         table.insert(circleParts, p)
     end
 end
@@ -652,40 +681,78 @@ initializeScanner()
 createCircle()
 
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.2); initializeESP()
-    if Config.AnimDisable then task.wait(0.5); cacheOriginalAnimations() end
+    task.wait(0.2)
+    initializeESP()
+    if Config.AnimDisable then
+        task.wait(0.5)
+        cacheOriginalAnimations()
+    end
 end)
 
 if LocalPlayer.Character then
-    task.wait(0.2); initializeESP()
-    if Config.AnimDisable then task.wait(0.5); cacheOriginalAnimations() end
+    task.wait(0.2)
+    initializeESP()
+    if Config.AnimDisable then
+        task.wait(0.5)
+        cacheOriginalAnimations()
+    end
 end
 
+-- // Base Timer // --
+-- Bereinigter Code Bereich --
 local plotsFolder = workspace:FindFirstChild("Plots")
 local baseEspInstances = {}
+local espBaseThread
+
 local function createBaseESP(plot, mainPart)
-    if baseEspInstances[plot.Name] then baseEspInstances[plot.Name]:Destroy() end
+    if baseEspInstances[plot.Name] then
+        baseEspInstances[plot.Name]:Destroy()
+    end
     local billboard = Instance.new("BillboardGui")
-    billboard.Name = "rznnq" .. plot.Name; billboard.Size = UDim2.new(0, 50, 0, 25); billboard.StudsOffset = Vector3.new(0, 5, 0); billboard.AlwaysOnTop = true; billboard.Adornee = mainPart; billboard.Parent = plot
+    billboard.Name = "rznnq" .. plot.Name
+    billboard.Size = UDim2.new(0, 50, 0, 25)
+    billboard.StudsOffset = Vector3.new(0, 5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = mainPart
+    billboard.MaxDistance = 1000
+    billboard.Parent = plot
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.TextScaled = true; label.Font = Enum.Font.Arcade; label.TextColor3 = Color3.fromRGB(255, 255, 0); label.TextStrokeTransparency = 0; label.Parent = billboard
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextScaled = true
+    label.Font = Enum.Font.Arcade
+    label.TextColor3 = Color3.fromRGB(255, 255, 0)
+    label.TextStrokeTransparency = 0
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+    label.Parent = billboard
     baseEspInstances[plot.Name] = billboard
     return billboard
 end
 
 local function updateBaseESP()
     if not plotsFolder then return end
+
     for _, plot in ipairs(plotsFolder:GetChildren()) do
-        local purchases = plot:FindFirstChild("Purchases"); local plotBlock = purchases and purchases:FindFirstChild("PlotBlock"); local mainPart = plotBlock and plotBlock:FindFirstChild("Main")
+        local purchases = plot:FindFirstChild("Purchases")
+        local plotBlock = purchases and purchases:FindFirstChild("PlotBlock")
+        local mainPart = plotBlock and plotBlock:FindFirstChild("Main")
         local billboard = baseEspInstances[plot.Name]
-        local timeLabel = mainPart and mainPart:FindFirstChild("BillboardGui") and mainPart.BillboardGui:FindFirstChild("RemainingTime")
+
+        local timeLabel = mainPart
+            and mainPart:FindFirstChild("BillboardGui")
+            and mainPart.BillboardGui:FindFirstChild("RemainingTime")
+
         if timeLabel and mainPart then
             billboard = billboard or createBaseESP(plot, mainPart)
             local label = billboard:FindFirstChildWhichIsA("TextLabel")
-            if label then label.Text = timeLabel.Text end
+            if label then
+                label.Text = timeLabel.Text
+            end
         elseif billboard then
-            billboard:Destroy(); baseEspInstances[plot.Name] = nil
+            billboard:Destroy()
+            baseEspInstances[plot.Name] = nil
         end
     end
 end
-RunService.RenderStepped:Connect(updateBaseESP)
+
+espBaseThread = RunService.RenderStepped:Connect(updateBaseESP)
