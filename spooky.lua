@@ -15,8 +15,7 @@ local whitelist = {
     "Khohoi6", 
     "Khohoi6", 
     "Khohoi6", 
-    "Khohoi6", 
-    
+    "Deonzim123", 
 }
 
 -- // --- WHITELIST LOGIC (CLIENT SIDE ADAPTED) --- // --
