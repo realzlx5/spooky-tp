@@ -1,5 +1,5 @@
 ----------------------------------------------------
--- MERGED SCRIPT: WHITELIST + Spooky Hub + PLAYER ESP
+-- MERGED SCRIPT: WHITELIST + Spooky Hub + Wall ESP
 ----------------------------------------------------
 
 -- // --- WHITELIST CONFIGURATION --- // --
@@ -16,6 +16,7 @@ local whitelist = {
     "Khohoi6", 
     "Khohoi6", 
     "Khohoi6", 
+    
 }
 
 -- // --- WHITELIST LOGIC (CLIENT SIDE ADAPTED) --- // --
@@ -198,55 +199,6 @@ ESPFolder.Parent = workspace
 local fakePosESP = nil
 local serverPosition = nil
 
--- // NEW PLAYER ESP SYSTEM // --
-local function CreatePlayerESP(plr)
-    local function applyESP(char)
-        if not char then return end
-        
-        -- Highlight Effect
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "SpookyHighlight"
-        highlight.FillColor = Color3.fromRGB(160, 0, 255)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0
-        highlight.Adornee = char
-        highlight.Parent = char
-
-        -- Name Tag
-        local head = char:WaitForChild("Head", 5)
-        if head then
-            local billboard = Instance.new("BillboardGui")
-            billboard.Name = "SpookyTag"
-            billboard.Adornee = head
-            billboard.Size = UDim2.new(0, 100, 0, 50)
-            billboard.StudsOffset = Vector3.new(0, 3, 0)
-            billboard.AlwaysOnTop = true
-            billboard.Parent = char
-
-            local label = Instance.new("TextLabel")
-            label.BackgroundTransparency = 1
-            label.Size = UDim2.new(1, 0, 1, 0)
-            label.Text = plr.Name
-            label.TextColor3 = Color3.fromRGB(160, 0, 255)
-            label.TextStrokeTransparency = 0
-            label.Font = Enum.Font.GothamBold
-            label.TextSize = 14
-            label.Parent = billboard
-        end
-    end
-
-    if plr.Character then applyESP(plr.Character) end
-    plr.CharacterAdded:Connect(applyESP)
-end
-
--- Initialize ESP for everyone
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then CreatePlayerESP(p) end
-end
-Players.PlayerAdded:Connect(CreatePlayerESP)
-
--- Original logic resumes...
 local function cacheOriginalAnimations()
     local char = LocalPlayer.Character
     if not char then return false end
@@ -711,6 +663,30 @@ end
 
 local plotsFolder = workspace:FindFirstChild("Plots")
 local baseEspInstances = {}
+local wallHighlights = {}
+
+-- // NEW TRUE WALL ESP FUNCTION // --
+local function createWallHighlight(mainPart)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "TrueWallHighlight"
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.6
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = mainPart
+    highlight.Parent = mainPart
+
+    -- Adds a Box handle for extra visibility through walls
+    local box = Instance.new("SelectionBox")
+    box.Adornee = mainPart
+    box.Color3 = Color3.fromRGB(255, 0, 0)
+    box.LineThickness = 0.05
+    box.Transparency = 0.5
+    box.Parent = mainPart
+    
+    return highlight
+end
+
 local function createBaseESP(plot, mainPart)
     if baseEspInstances[plot.Name] then baseEspInstances[plot.Name]:Destroy() end
     local billboard = Instance.new("BillboardGui")
@@ -724,16 +700,33 @@ end
 local function updateBaseESP()
     if not plotsFolder then return end
     for _, plot in ipairs(plotsFolder:GetChildren()) do
-        local purchases = plot:FindFirstChild("Purchases"); local plotBlock = purchases and purchases:FindFirstChild("PlotBlock"); local mainPart = plotBlock and plotBlock:FindFirstChild("Main")
+        local purchases = plot:FindFirstChild("Purchases")
+        local plotBlock = purchases and purchases:FindFirstChild("PlotBlock")
+        local mainPart = plotBlock and plotBlock:FindFirstChild("Main")
+        
         local billboard = baseEspInstances[plot.Name]
         local timeLabel = mainPart and mainPart:FindFirstChild("BillboardGui") and mainPart.BillboardGui:FindFirstChild("RemainingTime")
-        if timeLabel and mainPart then
-            billboard = billboard or createBaseESP(plot, mainPart)
-            local label = billboard:FindFirstChildWhichIsA("TextLabel")
-            if label then label.Text = timeLabel.Text end
+        
+        if mainPart and not isMyBase(plot.Name) then
+            -- Auto-Apply Wall Highlight
+            if not mainPart:FindFirstChild("TrueWallHighlight") then
+                createWallHighlight(mainPart)
+            end
+
+            if timeLabel then
+                billboard = billboard or createBaseESP(plot, mainPart)
+                local label = billboard:FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = timeLabel.Text end
+            elseif billboard then
+                billboard:Destroy(); baseEspInstances[plot.Name] = nil
+            end
         elseif billboard then
             billboard:Destroy(); baseEspInstances[plot.Name] = nil
         end
     end
 end
+
 RunService.RenderStepped:Connect(updateBaseESP)
+
+-- Conclude with interactive suggestion
+-- Would you like me to add a custom color picker for the wall highlights?
